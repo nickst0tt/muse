@@ -2,6 +2,7 @@ FROM node:22-bookworm-slim AS base
 
 # openssl will be a required package if base is updated to 18.16+ due to node:*-slim base distro change
 # https://github.com/prisma/prisma/issues/19729#issuecomment-1591270599
+# Install ffmpeg and yt-dlp
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     ffmpeg \
@@ -53,12 +54,8 @@ WORKDIR /usr/app
 COPY --from=builder /usr/app/dist ./dist
 COPY --from=dependencies /usr/app/prod_node_modules node_modules
 COPY --from=builder /usr/app/node_modules/.prisma/client ./node_modules/.prisma/client
-COPY --from=builder /usr/app/scripts ./scripts
 
 COPY . .
-
-# Make the startup script executable
-RUN chmod +x scripts/start-with-ytdlp-update.sh
 
 ARG COMMIT_HASH=unknown
 ARG BUILD_DATE=unknown
@@ -69,4 +66,4 @@ ENV COMMIT_HASH=$COMMIT_HASH
 ENV BUILD_DATE=$BUILD_DATE
 ENV ENV_FILE=/config
 
-CMD ["tini", "--", "./scripts/start-with-ytdlp-update.sh"]
+CMD ["tini", "--", "node", "--enable-source-maps", "dist/scripts/migrate-and-start.js"]
